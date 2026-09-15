@@ -5,77 +5,66 @@ local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
--- НАСТРОЙКИ ФУНКЦИЙ по умолчанию
+-- ПЕРЕМЕННЫЕ НАСТРОЕК
 local ESP_Enabled = true
 local Aimbot_Enabled = true
 local Menu_Open = true
 local AimPart = "Head" 
 
--- НАСТРОЙКИ FOV
 local FOV_Radius = 150 
 local isAiming = false
 
 ----------------------------------------------------------------
--- 1. СОЗДАНИЕ ИНТЕРФЕЙСА И КРУГА FOV (НОВЫЙ ТЕХНОЛОГИЧНЫЙ МЕТОД)
+-- 1. СТАБИЛЬНЫЙ ИНТЕРФЕЙС И КРУГ (БЕЗ СБОЕВ)
 ----------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AdminMenu_Roblox"
+ScreenGui.Name = "SafeAdminMenu"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
--- Создаем рамку FOV через обычный Frame (без использования текстур и картинок)
+-- Прозрачный круг с аккуратной системной обводкой
 local FOVCircle = Instance.new("Frame")
 FOVCircle.Name = "FOVCircle"
 FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
 FOVCircle.Size = UDim2.new(0, FOV_Radius * 2, 0, FOV_Radius * 2)
-FOVCircle.BackgroundTransparency = 1 -- Полностью прозрачный внутри
+FOVCircle.BackgroundTransparency = 1 
 
--- Превращаем квадратный Frame в идеальный круг
 local CircleCorner = Instance.new("UICorner")
 CircleCorner.CornerRadius = UDim.new(1, 0)
 CircleCorner.Parent = FOVCircle
 
--- Создаем тонкую обводку для круга
 local CircleStroke = Instance.new("UIStroke")
-CircleStroke.Color = Color3.fromRGB(255, 60, 60) -- КРАСНЫЙ цвет линии круга
-CircleStroke.Thickness = 1.5 -- ТОЛЩИНА линии
-CircleStroke.Transparency = 0.2 -- ПРОЗРАЧНОСТЬ линии (0 - яркая, 1 - невидимая)
-CircleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+CircleStroke.Color = Color3.fromRGB(255, 60, 60)
+CircleStroke.Thickness = 1.5
+CircleStroke.Transparency = 0.2
 CircleStroke.Parent = FOVCircle
 
 FOVCircle.Visible = true
 FOVCircle.Parent = ScreenGui
 
--- Главная панель меню
+-- Панель меню
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 220, 0, 260)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
+local UICornerM = Instance.new("UICorner")
+UICornerM.CornerRadius = UDim.new(0, 8)
+UICornerM.Parent = MainFrame
 
--- Заголовок меню
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.Text = "  OWNER MENU (v1.5)"
+Title.Text = "  OWNER MENU (v1.6)"
 Title.TextColor3 = Color3.fromRGB(255, 60, 60)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
 Title.Parent = MainFrame
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 8)
-TitleCorner.Parent = Title
-
--- Функция для быстрой сборки кнопок в меню
 local function createButton(text, pos, color)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 180, 0, 35)
@@ -100,18 +89,8 @@ TargetButton.TextColor3 = Color3.fromRGB(255, 215, 0)
 local FOVButton = createButton("FOV RADIUS: 150", UDim2.new(0, 20, 0, 185), Color3.fromRGB(45, 45, 45))
 FOVButton.TextColor3 = Color3.fromRGB(0, 200, 255)
 
-local TipText = Instance.new("TextLabel")
-TipText.Size = UDim2.new(1, 0, 0, 25)
-TipText.Position = UDim2.new(0, 0, 1, -25)
-TipText.BackgroundTransparency = 1
-TipText.Text = "Нажми [Z] чтобы скрыть/показать"
-TipText.TextColor3 = Color3.fromRGB(150, 150, 150)
-TipText.Font = Enum.Font.SourceSansItalic
-TipText.TextSize = 12
-TipText.Parent = MainFrame
-
 ----------------------------------------------------------------
--- 2. ЛОГИКА НАЖАТИЙ И КНОПОК
+-- 2. КНОПКИ И ПЕРЕКЛЮЧАТЕЛИ
 ----------------------------------------------------------------
 local function clearAllESP()
     for _, p in ipairs(Players:GetPlayers()) do
@@ -161,7 +140,6 @@ FOVButton.MouseButton1Click:Connect(function()
     if FOV_Radius == 100 then FOV_Radius = 150
     elseif FOV_Radius == 150 then FOV_Radius = 200
     elseif FOV_Radius == 200 then FOV_Radius = 100 end
-    
     FOVCircle.Size = UDim2.new(0, FOV_Radius * 2, 0, FOV_Radius * 2)
     FOVButton.Text = "FOV RADIUS: " .. tostring(FOV_Radius)
 end)
@@ -176,28 +154,25 @@ UserInputService.InputBegan:Connect(function(input, processed)
 end)
 
 ----------------------------------------------------------------
--- 3. АДАПТИВНЫЙ TEAM CHECK (ОТ СЕПАРАЦИИ ТИММЕЙТОВ В ШУТЕРАХ)
+-- 3. ПРОВЕРКА КОМАНД COUNTER BLOX
 ----------------------------------------------------------------
-local function getPlayerTeam(player)
-    if player.Team then return tostring(player.Team.Name) end
-    
-    local teamFolder = player:FindFirstChild("Team") or player:FindFirstChild("TeamFolder")
-    if teamFolder then return tostring(teamFolder.Value) end
-    
-    if player.TeamColor then return tostring(player.TeamColor.Name) end
-    return "Neutral"
-end
-
 local function isEnemy(player)
     if player == localPlayer then return false end
     
-    local myTeam = getPlayerTeam(localPlayer)
-    local enemyTeam = getPlayerTeam(player)
+    -- 1. Сравниваем строковые значения папок команд внутри Player
+    local myTeamVal = localPlayer:FindFirstChild("Team") or localPlayer:FindFirstChild("TeamFolder")
+    local enemyTeamVal = player:FindFirstChild("Team") or player:FindFirstChild("TeamFolder")
     
-    if myTeam ~= "Neutral" and myTeam == enemyTeam then
-        return false -- Это союзник
+    if myTeamVal and enemyTeamVal and myTeamVal.Value == enemyTeamVal.Value then
+        return false -- Союзники
     end
-    return true -- Это враг
+
+    -- 2. Стандартная проверка Roblox Teams
+    if localPlayer.Team and player.Team and localPlayer.Team == player.Team then
+        return false
+    end
+    
+    return true
 end
 
 local function getTargetPart(character)
@@ -209,38 +184,38 @@ local function getTargetPart(character)
 end
 
 ----------------------------------------------------------------
--- 4. РЕНДЕР КАДРОВ (ПЕРЕМЕЩЕНИЕ КРУГА, АИМ, ЕСП)
+-- 4. ОБРАБОТКА ПО КАДРАМ (МЫШЬ + АИМ + ESP)
 ----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
-    -- Ведем круг FOV строго по центру за курсором мыши
     local mousePos = UserInputService:GetMouseLocation()
     FOVCircle.Position = UDim2.new(0, mousePos.X, 0, mousePos.Y)
 
-    -- Цикл обновления ESP
-    for _, player in ipairs(Players:GetPlayers()) do
-        local character = player.Character
-        if character then
-            local highlight = character:FindFirstChild("ESPHighlight")
-            
-            if ESP_Enabled and isEnemy(player) and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-                if not highlight then
-                    highlight = Instance.new("Highlight")
-                    highlight.Name = "ESPHighlight"
-                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                    highlight.Adornee = character
-                    highlight.Parent = character
+    -- Обновление ESP подсветки
+    if ESP_Enabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            local character = player.Character
+            if character then
+                local highlight = character:FindFirstChild("ESPHighlight")
+                
+                if isEnemy(player) and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
+                    if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "ESPHighlight"
+                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.FillTransparency = 0.5
+                        highlight.OutlineTransparency = 0
+                        highlight.Parent = character
+                    end
+                else
+                    if highlight then highlight:Destroy() end
                 end
-            else
-                if highlight then highlight:Destroy() end
             end
         end
     end
 end)
 
--- Поиск ближайшей цели внутри круга FOV
+-- Поиск цели в FOV
 local function getClosestTargetInFOV()
     local closestPart = nil
     local shortestDistance = math.huge
@@ -256,7 +231,6 @@ local function getClosestTargetInFOV()
                     
                     if onScreen then
                         local magnitude = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                        -- Проверяем, что враг попал в радиус круга
                         if magnitude <= FOV_Radius and magnitude < shortestDistance then
                             shortestDistance = magnitude
                             closestPart = targetPart
@@ -269,6 +243,35 @@ local function getClosestTargetInFOV()
     return closestPart
 end
 
--- Считывание нажатия и отжатия правой кнопки мыши (ПКМ)
+-- Обработка зажатия правой кнопки мыши (ПКМ)
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end 
+    if input.UserInputType == Enum.UserInputType.MouseButton2 and Aimbot_Enabled then
+        isAiming = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isAiming = false
+    end
+end)
+
+-- Легитимное наведение через симуляцию смещения курсора
+RunService.RenderStepped:Connect(function()
+    if isAiming and Aimbot_Enabled then
+        local target = getClosestTargetInFOV()
+        if target then
+            local screenPos, onScreen = camera:WorldToViewportPoint(target.Position)
+            if onScreen then
+                local mousePos = UserInputService:GetMouseLocation()
+                -- Вычисляем дистанцию смещения
+                local moveX = (screenPos.X - mousePos.X) * 0.25 -- 0.25 плавность доводки
+                local moveY = (screenPos.Y - mousePos.Y) * 0.25
+                
+                -- Двигаем прицел
+                mousemoverel(moveX, moveY)
+            end
+        end
+    end
+end)
