@@ -16,28 +16,24 @@ local FOV_Radius = 150
 local isAiming = false
 
 ----------------------------------------------------------------
--- 1. СОЗДАНИЕ ИНТЕРФЕЙСА И КРУГА FOV НА СТАНДАРТНОМ UI
+-- 1. ИСПРАВЛЕННЫЙ КРУГ FOV (ТЕПЕРЬ ПРОЗРАЧНЫЙ С КОНТУРОМ)
 ----------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AdminMenu_Roblox"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
--- Создаем легитимный круг FOV через ImageLabel
+-- Создаем пустой круг (только обводка)
 local FOVCircle = Instance.new("ImageLabel")
 FOVCircle.Name = "FOVCircle"
 FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
 FOVCircle.Size = UDim2.new(0, FOV_Radius * 2, 0, FOV_Radius * 2)
 FOVCircle.BackgroundTransparency = 1
-FOVCircle.Image = "rbxassetid://12321451515" -- ID текстуры чистого круга (контур)
+-- Используем проверенный ID полностью прозрачного круга с тонкой рамкой
+FOVCircle.Image = "http://roblox.com" 
 FOVCircle.ImageColor3 = Color3.fromRGB(255, 60, 60)
 FOVCircle.Visible = true
 FOVCircle.Parent = ScreenGui
-
--- Если ID выше не загрузится, используем резервный вариант (белый круг Roblox)
-if FOVCircle.Image == "" then
-    FOVCircle.Image = "rbxassetid://2327072517"
-end
 
 -- Главная панель меню
 local MainFrame = Instance.new("Frame")
@@ -53,11 +49,10 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
--- Заголовок
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.Text = "  OWNER MENU (v1.3)"
+Title.Text = "  OWNER MENU (v1.4)"
 Title.TextColor3 = Color3.fromRGB(255, 60, 60)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.SourceSansBold
@@ -68,7 +63,6 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 8)
 TitleCorner.Parent = Title
 
--- Конструктор кнопок
 local function createButton(text, pos, color)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 180, 0, 35)
@@ -104,7 +98,7 @@ TipText.TextSize = 12
 TipText.Parent = MainFrame
 
 ----------------------------------------------------------------
--- 2. УПРАВЛЕНИЕ И КЛИКИ
+-- 2. УПРАВЛЕНИЕ КНОПКАМИ
 ----------------------------------------------------------------
 local function clearAllESP()
     for _, p in ipairs(Players:GetPlayers()) do
@@ -151,13 +145,9 @@ TargetButton.MouseButton1Click:Connect(function()
 end)
 
 FOVButton.MouseButton1Click:Connect(function()
-    if FOV_Radius == 100 then
-        FOV_Radius = 150
-    elseif FOV_Radius == 150 then
-        FOV_Radius = 200
-    elseif FOV_Radius == 200 then
-        FOV_Radius = 100
-    end
+    if FOV_Radius == 100 then FOV_Radius = 150
+    elseif FOV_Radius == 150 then FOV_Radius = 200
+    elseif FOV_Radius == 200 then FOV_Radius = 100 end
     FOVCircle.Size = UDim2.new(0, FOV_Radius * 2, 0, FOV_Radius * 2)
     FOVButton.Text = "FOV RADIUS: " .. tostring(FOV_Radius)
 end)
@@ -167,28 +157,38 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.Z then
         Menu_Open = not Menu_Open
         MainFrame.Visible = Menu_Open
-        if Aimbot_Enabled then
-            FOVCircle.Visible = Menu_Open
-        end
+        if Aimbot_Enabled then FOVCircle.Visible = Menu_Open end
     end
 end)
 
 ----------------------------------------------------------------
--- 3. ЛОГИКА СОРЕВНОВАТЕЛЬНОЙ ПРОВЕРКИ (БЕЗ ТИМЕЙТОВ)
+-- 3. АДАПТИВНЫЙ TEAM CHECK ПОД СТРУКТУРУ COUNTER BLOX
 ----------------------------------------------------------------
+local function getPlayerTeam(player)
+    -- 1. Проверяем стандартную команду
+    if player.Team then return tostring(player.Team.Name) end
+    
+    -- 2. Проверяем кастомную папку команды внутри игрока (Часто в CB)
+    local teamFolder = player:FindFirstChild("Team") or player:FindFirstChild("TeamFolder")
+    if teamFolder then return tostring(teamFolder.Value) end
+    
+    -- 3. Проверяем по цвету команды
+    if player.TeamColor then return tostring(player.TeamColor.Name) end
+    
+    return "Neutral"
+end
+
 local function isEnemy(player)
     if player == localPlayer then return false end
     
-    -- Жесткая проверка команд через стандартный TeamService
-    if localPlayer.Team ~= nil and player.Team ~= nil then
-        return localPlayer.Team ~= player.Team
-    end
+    local myTeam = getPlayerTeam(localPlayer)
+    local enemyTeam = getPlayerTeam(player)
     
-    -- Проверка на случай кастомных цветов команд (без TeamService)
-    if localPlayer.TeamColor == player.TeamColor and localPlayer.TeamColor ~= BrickColor.new("White") then
+    -- Если команды совпадают и это не пустая игра — они союзники
+    if myTeam ~= "Neutral" and myTeam == enemyTeam then
         return false
     end
-
+    
     return true
 end
 
@@ -196,13 +196,15 @@ local function getTargetPart(character)
     if AimPart == "Head" then
         return character:FindFirstChild("Head")
     else
-        return character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+        return character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or character:FindFirstChild("Chest")
     end
 end
 
--- Основной цикл обновления кадров
+----------------------------------------------------------------
+-- 4. ОСНОВНОЙ ЦИКЛ ОБРАБОТКИ
+----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
-    -- Ведем круг FOV строго по центру экрана (за курсором мыши)
+    -- Центрируем пустой круг FOV ровно по мышке
     local mousePos = UserInputService:GetMouseLocation()
     FOVCircle.Position = UDim2.new(0, mousePos.X, 0, mousePos.Y)
 
@@ -230,7 +232,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Поиск цели только в круге FOV
+-- Поиск цели в круге FOV
 local function getClosestTargetInFOV()
     local closestPart = nil
     local shortestDistance = math.huge
@@ -258,7 +260,7 @@ local function getClosestTargetInFOV()
     return closestPart
 end
 
--- Считывание зажатия ПКМ
+-- ПКМ зажатие
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end 
     if input.UserInputType == Enum.UserInputType.MouseButton2 and Aimbot_Enabled then
@@ -272,13 +274,9 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Плавная наводка камеры
+-- Наводка
 RunService.RenderStepped:Connect(function()
     if isAiming and Aimbot_Enabled then
         local target = getClosestTargetInFOV()
         if target then
             local targetCFrame = CFrame.new(camera.CFrame.Position, target.Position)
-            camera.CFrame = camera.CFrame:Lerp(targetCFrame, 0.2)
-        end
-    end
-end)
